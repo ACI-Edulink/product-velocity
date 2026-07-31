@@ -179,21 +179,21 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   .logo{font-size:16px}
   .header-subtitle{font-size:9px}
   .header-center{order:3;flex-basis:100%;justify-content:flex-start}
-  .tab-strip{max-width:100%;width:100%}
+  .tab-strip{max-width:100%;width:100%;flex-wrap:wrap;overflow-x:visible;overflow-y:auto;row-gap:4px;max-height:88px}
   .tab-btn{font-size:10px;padding:5px 8px}
   .header-right{order:2;margin-left:auto}
   #openUpdateModal{padding:5px 10px;font-size:10px}
   #lastUpdated{display:none}
 
-  .filter-bar{padding:8px 12px;gap:6px}
+  .filter-bar{padding:10px 12px;gap:8px;flex-direction:column;align-items:stretch}
   .filter-label{font-size:9px}
-  .zone-btns{gap:3px}
-  .zone-btn{font-size:10px;padding:3px 7px}
+  .zone-btns{gap:4px;width:100%}
+  .zone-btn{font-size:11px;padding:6px 10px;flex:1;text-align:center}
   .category-pill{font-size:11px;padding:5px 11px}
   .category-filter-card{padding:12px}
-  .filter-select{font-size:10px;padding:3px 6px}
+  .filter-select{font-size:12px;padding:7px 8px;flex:1;width:auto}
   .filter-divider{display:none}
-  .clear-btn{font-size:10px;padding:3px 7px}
+  .clear-btn{font-size:11px;padding:7px 10px;width:100%}
 
   .main{padding:10px 10px;max-width:100%}
 
@@ -223,9 +223,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 }
 @media(max-width:480px){
   .logo{font-size:14px}
+  .header-subtitle{display:none}
+  #openUpdateModal{padding:5px 9px;font-size:9px}
   .tab-btn{font-size:9px;padding:4px 6px}
+  .tab-strip{max-height:78px}
   .heatmap-table th,.heatmap-table td{padding:3px 4px}
   .heatmap-cell{min-width:44px;font-size:8px}
+  .card-kpis{flex-wrap:wrap;gap:6px 10px}
+  .sum-card{min-width:100%}
+  .cat-summary{gap:8px}
 }
 .search-box{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;margin-bottom:10px;outline:none}
 .search-box:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,87,168,.1)}
