@@ -353,6 +353,7 @@ const state = {
   monthTo: null,
   status: '',
   stockSort: { col: 'currentStock', dir: 'asc' },
+  stockSelectedMonth: null,
   charts: {}
 };
 
@@ -808,18 +809,34 @@ function renderOverviewPage(){
 // ══════════════════════════════════════════
 function renderStockPage(){
   const months = getMonthRange();
-  const latestM = months[months.length-1];
+  const latestM = (state.stockSelectedMonth && MONTHS.includes(state.stockSelectedMonth)) ? state.stockSelectedMonth : months[months.length-1];
+  const selectedIndex = MONTHS.indexOf(latestM);
+  const previousM = selectedIndex > 0 ? MONTHS[selectedIndex-1] : null;
+  const years = [...new Set(MONTHS.map(m => '20'+m.split("'")[1]))];
+  const selectedYear = '20'+latestM.split("'")[1];
+  const yearMonths = MONTHS.filter(m => '20'+m.split("'")[1] === selectedYear);
   const allProds = [];
   visibleCategories().forEach(cat=>{
     if(state.categories.size>0 && !state.categories.has(cat)) return;
     filterProducts(cat).forEach(p=>allProds.push({...p,cat}));
   });
-  allProds.forEach(p=>{ p.lastMonthNsi = (p.filteredTrend[latestM]||{nsi:0}).nsi; });
+  allProds.forEach(p=>{
+    const getNsi = m => {
+      if(!m) return null;
+      if(state.zones.size===0) return (p.trend[m]||{nsi:0}).nsi;
+      let total=0;
+      state.zones.forEach(z=>{total+=((p.zoneMonth||{})[z]||{})[m]?.nsi||0;});
+      return total;
+    };
+    p.lastMonthNsi = getNsi(latestM);
+    p.previousMonthNsi = getNsi(previousM);
+    p.momGrowth = p.previousMonthNsi === null || p.previousMonthNsi === 0 ? null : (p.lastMonthNsi-p.previousMonthNsi)/Math.abs(p.previousMonthNsi)*100;
+  });
 
   const sortCol = state.stockSort.col, sortDir = state.stockSort.dir;
   allProds.sort((a,b)=>{
-    const av = sortCol==='lastMonthNsi' ? a.lastMonthNsi : a.currentStock;
-    const bv = sortCol==='lastMonthNsi' ? b.lastMonthNsi : b.currentStock;
+    const av = sortCol==='momGrowth' ? (a.momGrowth??-Infinity) : sortCol==='lastMonthNsi' ? a.lastMonthNsi : a.currentStock;
+    const bv = sortCol==='momGrowth' ? (b.momGrowth??-Infinity) : sortCol==='lastMonthNsi' ? b.lastMonthNsi : b.currentStock;
     return sortDir==='asc' ? av-bv : bv-av;
   });
 
@@ -827,10 +844,16 @@ function renderStockPage(){
 
   return `<div class="panel">
     <div class="panel-title"><span class="icon">📦</span>Stock Health — All SKUs (${allProds.length})</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;font-size:12px;color:var(--navy)">
+      <label for="stockYearSel" style="font-weight:600">Year</label>
+      <select class="filter-select" id="stockYearSel" style="background:#fff;color:var(--navy);border:1px solid #cbd5e1" onchange="changeStockYear(this.value)">${years.map(y=>`<option value="${y}" ${y===selectedYear?'selected':''}>${y}</option>`).join('')}</select>
+      <label for="stockMonthSel" style="font-weight:600">Month</label>
+      <select class="filter-select" id="stockMonthSel" style="background:#fff;color:var(--navy);border:1px solid #cbd5e1" onchange="changeStockMonth(this.value)">${yearMonths.map(m=>`<option value="${m}" ${m===latestM?'selected':''}>${m.split("'")[0]}</option>`).join('')}</select>
+    </div>
     <input class="search-box" placeholder="Search product name or code…" oninput="filterStockTable(this.value)">
     <div class="table-scroll">
       <table class="stock-table" id="stockHealthTable">
-        <thead><tr><th>Product Name</th><th>Category</th><th>Status</th><th class="sortable-th" onclick="toggleStockSort('currentStock')" style="cursor:pointer;user-select:none">Current Stock${arrow('currentStock')}</th><th class="sortable-th" onclick="toggleStockSort('lastMonthNsi')" style="cursor:pointer;user-select:none">Last Month NSI${arrow('lastMonthNsi')}</th><th>Stock Risk</th></tr></thead>
+        <thead><tr><th>Product Name</th><th>Category</th><th>Status</th><th class="sortable-th" onclick="toggleStockSort('currentStock')" style="cursor:pointer;user-select:none">Current Stock${arrow('currentStock')}</th><th class="sortable-th" onclick="toggleStockSort('lastMonthNsi')" style="cursor:pointer;user-select:none">Current Month NSI (${latestM})${arrow('lastMonthNsi')}</th><th class="sortable-th" onclick="toggleStockSort('momGrowth')" style="cursor:pointer;user-select:none">MoM Growth / Degrowth${arrow('momGrowth')}</th><th>Stock Risk</th></tr></thead>
         <tbody>
           ${allProds.map(p=>{
             const lnsi = p.lastMonthNsi;
@@ -844,6 +867,7 @@ function renderStockPage(){
               <td><span class="tag ${p.status==='Active'?'tag-active':'tag-inactive'}">${p.status}</span></td>
               <td style="font-weight:700;color:${p.currentStock===0?'var(--red)':p.currentStock<100?'var(--amber)':'var(--green)'}">${p.currentStock.toLocaleString()}</td>
               <td style="font-weight:600">৳${fmt(lnsi)}</td>
+              <td style="font-weight:700;color:${p.momGrowth===null?'var(--muted)':p.momGrowth>=0?'var(--green)':'var(--red)'}">${p.momGrowth===null?'—':(p.momGrowth>0?'+':'')+p.momGrowth.toFixed(1)+'%'}</td>
               <td>${risk}</td>
             </tr>`;
           }).join('')}
@@ -852,6 +876,16 @@ function renderStockPage(){
     </div>
   </div>`;
 }
+
+window.changeStockYear = function(year){
+  const options = MONTHS.filter(m => '20'+m.split("'")[1] === year);
+  state.stockSelectedMonth = options[options.length-1] || null;
+  renderAll();
+};
+window.changeStockMonth = function(month){
+  state.stockSelectedMonth = month;
+  renderAll();
+};
 
 window.toggleStockSort = function(col){
   if(state.stockSort.col === col){
